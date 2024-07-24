@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -6,6 +7,10 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
+
+export const roundsOfHashing = 10;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -29,5 +34,28 @@ export class AuthService {
     return {
       accessToken: this.jwtService.sign({ userId: user.id }),
     };
+  }
+
+  async create(createUserDto: CreateUserDto) {
+    const hashedPassword = await bcrypt.hash(
+      createUserDto.password,
+      roundsOfHashing,
+    );
+
+    createUserDto.password = hashedPassword;
+
+    try {
+      const createdUser = await this.prisma.user.create({
+        select: {
+          email: true,
+          name: true,
+        },
+        data: createUserDto,
+      });
+      return createdUser;
+    } catch (e) {
+      if (e.code === 'P2002')
+        throw new BadRequestException('Email already registered');
+    }
   }
 }

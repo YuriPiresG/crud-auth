@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 export const roundsOfHashing = 10;
@@ -13,24 +12,6 @@ export const roundsOfHashing = 10;
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
-
-  async create(createUserDto: CreateUserDto) {
-    const hashedPassword = await bcrypt.hash(
-      createUserDto.password,
-      roundsOfHashing,
-    );
-
-    createUserDto.password = hashedPassword;
-
-    try {
-      await this.prisma.user.create({
-        data: createUserDto,
-      });
-    } catch (e) {
-      if (e.code === 'P2002')
-        throw new BadRequestException('Email already registered');
-    }
-  }
 
   async findAll() {
     return await this.prisma.user.findMany({
